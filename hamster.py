@@ -1,3 +1,7 @@
+# Made with ❤ by @adearman
+# Update at github.com/adearman/hamsterkombat
+# Free for use
+
 import requests
 import json
 import time
@@ -30,6 +34,32 @@ def get_headers(token):
         'sec-ch-ua-platform': '"Windows"'
     }
 
+def get_token(init_data_raw):
+    url = 'https://api.hamsterkombat.io/auth/auth-by-telegram-webapp'
+    headers = {
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Connection': 'keep-alive',
+        'Origin': 'https://hamsterkombat.io',
+        'Referer': 'https://hamsterkombat.io/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36',
+        'accept': 'application/json',
+        'content-type': 'application/json'
+    }
+    data = json.dumps({"initDataRaw": init_data_raw})
+    response = requests.post(url, headers=headers, data=data)
+    if response.status_code == 200:
+        return response.json()['authToken']
+    else:
+        error_data = response.json()
+        if "invalid" in error_data.get("error_code", "").lower():
+            print(Fore.RED + Style.BRIGHT + "\rFailed Get Token. Invalid init data", flush=True)
+        else:
+            print(Fore.RED + Style.BRIGHT + f"\rFailed Get Token. {error_data}", flush=True)
+        return None
+
 def authenticate(token):
     url = 'https://api.hamsterkombat.io/auth/me-telegram'
     headers = get_headers(token)
@@ -60,33 +90,94 @@ def tap(token, max_taps, available_taps):
     response = requests.post(url, headers=headers, data=data)
     return response
 
+def list_tasks(token):
+    url = 'https://api.hamsterkombat.io/clicker/list-tasks'
+    headers = get_headers(token)
+    response = requests.post(url, headers=headers)
+    return response
+
+def exchange(token):
+    url = 'https://api.hamsterkombat.io/clicker/select-exchange'
+    headers = get_headers(token)
+    headers['accept'] = 'application/json'
+    headers['content-type'] = 'application/json'
+    data = json.dumps({"exchangeId": 'okx'})
+    response = requests.post(url, headers=headers, data=data)
+    return response
+
+def check_task(token, task_id):
+    url = 'https://api.hamsterkombat.io/clicker/check-task'
+    headers = get_headers(token)
+    headers['accept'] = 'application/json'
+    headers['content-type'] = 'application/json'
+    data = json.dumps({"taskId": task_id})
+    response = requests.post(url, headers=headers, data=data)
+    return response
+cek_task = False
 def main():
-    tokens = load_tokens('tokens.txt')
-    token_cycle = cycle(tokens)
-    
+    global cek_task
+    print(Fore.GREEN + Style.BRIGHT + "Starting Hamster Kombat....")
+    init_data = load_tokens('initdata.txt')
+    token_cycle = cycle(init_data)
+    token_dict = {}  # Dictionary to store successful tokens
     while True:
-        token = next(token_cycle)
-        # Authenticate
+        init_data_raw = next(token_cycle)
+        token = token_dict.get(init_data_raw)
+        if token:
+            print(Fore.GREEN + Style.BRIGHT + f"\rMenggunakan token yang sudah ada...", end="", flush=True)
+        else:
+            print(Fore.GREEN + Style.BRIGHT + f"\rMendapatkan token...", end="", flush=True)
+
+            token = get_token(init_data_raw)
+            if token:
+                token_dict[init_data_raw] = token
+                print(Fore.GREEN + Style.BRIGHT + f"\rBerhasil mendapatkan token    ", flush=True)
+            else:
+                print(Fore.RED + Style.BRIGHT + f"Beralih ke akun selanjutnya\n\n", flush=True)
+                continue  # Lanjutkan ke iterasi berikutnya jika gagal mendapatkan token
+
         response = authenticate(token)
+        ## TOKEN AMAN
         if response.status_code == 200:
             user_data = response.json()
             username = user_data['telegramUser']['username']
-            print(Fore.GREEN + Style.BRIGHT + f"\n======[{Fore.WHITE + Style.BRIGHT} {username} {Fore.GREEN + Style.BRIGHT}]======")
+            print(Fore.GREEN + Style.BRIGHT + f"\r\n======[{Fore.WHITE + Style.BRIGHT} {username} {Fore.GREEN + Style.BRIGHT}]======")
             # Sync Clicker
+            print(Fore.GREEN + f"\rGetting info user...", end="", flush=True)
             response = sync_clicker(token)
             if response.status_code == 200:
                 clicker_data = response.json()['clickerUser']
-                print(Fore.YELLOW + Style.BRIGHT + f"[ Level ] : {clicker_data['level']}")
+                print(Fore.YELLOW + Style.BRIGHT + f"\r[ Level ] : {clicker_data['level']}          ", flush=True)
                 print(Fore.YELLOW + Style.BRIGHT + f"[ Total Earned ] : {int(clicker_data['totalCoins'])}")
                 print(Fore.YELLOW + Style.BRIGHT + f"[ Coin ] : {int(clicker_data['balanceCoins'])}")
                 print(Fore.YELLOW + Style.BRIGHT + f"[ Energy ] : {clicker_data['availableTaps']}")
-
                 boosts = clicker_data['boosts']
                 boost_max_taps_level = boosts.get('BoostMaxTaps', {}).get('level', 0)
                 boost_earn_per_tap_level = boosts.get('BoostEarnPerTap', {}).get('level', 0)
                 
-                print(Fore.GREEN + Style.BRIGHT + f"[ Max Energy ] : {boost_max_taps_level}")
-                print(Fore.GREEN + Style.BRIGHT + f"[ Level Tap ] : {boost_earn_per_tap_level}")
+                print(Fore.CYAN + Style.BRIGHT + f"[ Level Energy ] : {boost_max_taps_level}")
+                print(Fore.CYAN + Style.BRIGHT + f"[ Level Tap ] : {boost_earn_per_tap_level}")
+                print(Fore.CYAN + Style.BRIGHT + f"[ Exchange ] : {clicker_data['exchangeId']}")
+                # print(clicker_data['exchangeId'])
+                if clicker_data['exchangeId'] != None:
+                    print(Fore.GREEN + '\rSeting exchange to OKX..',end="", flush=True)
+                    exchange_set = exchange(token)
+
+                    if exchange_set.status_code == 200:
+                        print(Fore.GREEN + Style.BRIGHT +'\rSukses set exchange ke OKX', flush=True)
+                    else:
+                        print(Fore.RED + Style.BRIGHT +'\rGagal set exchange' + exchange_set.response.json(), flush=True)
+                print(Fore.CYAN + Style.BRIGHT + f"[ Passive Earn ] : {clicker_data['earnPassivePerHour']}\n")
+                print(Fore.GREEN + f"\r[ Tap Status ] : Tapping ...", end="", flush=True)
+
+
+
+                response = tap(token, clicker_data['maxTaps'], clicker_data['availableTaps'])
+                if response.status_code == 200:
+                    print(Fore.GREEN + Style.BRIGHT + "\r[ Tap Status ] : Tapped            ", flush=True)
+                else:
+                    print(Fore.RED + Style.BRIGHT + "\r[ Tap Status ] : Gagal Tap           ", flush=True)
+                    break 
                 print(Fore.GREEN + f"\r[ Checkin Daily ] : Checking...", end="", flush=True)
 
                 time.sleep(1)
@@ -98,28 +189,50 @@ def main():
                         print(Fore.GREEN + Style.BRIGHT + f"\r[ Checkin Daily ] Days {daily_response['days']} | Completed", flush=True)
                     else:
                         print(Fore.RED + Style.BRIGHT + f"\r[ Checkin Daily ] Days {daily_response['days']} | Belum saat nya claim daily", flush=True)
-
                 else:
                     print(Fore.RED + Style.BRIGHT + f"\r[ Checkin Daily ] Gagal cek daily {response.status_code}", flush=True)
-                print(Fore.GREEN + f"\r[ Tap Status ] : Tapping ...", end="", flush=True)
-                response = tap(token, clicker_data['maxTaps'], clicker_data['availableTaps'])
-                if response.status_code == 200:
-                    print(Fore.GREEN + Style.BRIGHT + "\r[ Tap Status ] : Tapped            ", flush=True)
+                
+                # List Tasks
+                print(Fore.GREEN + f"\r[ List Task ] : Checking...", end="", flush=True)
+                if cek_task == False:
+                    response = list_tasks(token)
+                    cek_task = True
+                    if response.status_code == 200:
+                        tasks = response.json()['tasks']
+                        all_completed = all(task['isCompleted'] or task['id'] == 'invite_friends' for task in tasks)
+                        if all_completed:
+                            print(Fore.GREEN + Style.BRIGHT + "\r[ List Task ] : Semua task sudah diclaim", flush=True)
+                            continue
+                        else:
+                            for task in tasks:
+                                if not task['isCompleted']:
+                                    print(Fore.YELLOW + Style.BRIGHT + f"\r[ List Task ] : Claiming {task['id']}...", end="", flush=True)
+                                    response = check_task(token, task['id'])
+                                    if response.status_code == 200 and response.json()['task']['isCompleted']:
+                                        print(Fore.GREEN + Style.BRIGHT + f"\r[ List Task ] : Claimed {task['id']}", flush=True)
+                                    else:
+                                        print(Fore.RED + Style.BRIGHT + f"\r[ List Task ] : Gagal Claim {task['id']}", flush=True)
+                    else:
+                        print(Fore.RED + Style.BRIGHT + f"\r[ List Task ] : Gagal mendapatkan list task {response.status_code}", flush=True)
                 else:
-                    print(Fore.RED + Style.BRIGHT + "\r[ Tap Status ] : Gagal Tap           ", flush=True)
-
-                    break
-                time.sleep(1) 
+                    print(Fore.GREEN + Style.BRIGHT + "\r[ List Task ] : Sudah di cek dan claimed", flush=True)
+                    continue
             else:
-                print(Fore.RED + Style.BRIGHT + f"Gagal mendapatkan info user {response.status_code}")
+                print(Fore.RED + Style.BRIGHT + f"\r Gagal mendapatkan info user {response.status_code}", flush=True)
+        ## TOKEN MATI        
         elif response.status_code == 401:
             error_data = response.json()
             if error_data.get("error_code") == "NotFound_Session":
                 print(Fore.RED + Style.BRIGHT + f"=== [ Token Invalid {token} ] ===")
+                token_dict.pop(init_data_raw, None)  # Remove invalid token
+                token = None  # Set token ke None untuk mendapatkan token baru di iterasi berikutnya
             else:
                 print(Fore.RED + Style.BRIGHT + "Authentication failed with unknown error")
-
-        time.sleep(1)  # Add delay to prevent spamming the server
+        else:
+            print(Fore.RED + Style.BRIGHT + f"Error with status code: {response.status_code}")
+            token = None  # Set token ke None jika terjadi error lain
+            
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()
