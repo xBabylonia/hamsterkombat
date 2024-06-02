@@ -145,7 +145,12 @@ def buy_upgrade(token, upgrade_id, upgrade_name):
     if response.status_code == 200:
         print(Fore.GREEN + Style.BRIGHT + f"\r[ Upgrade Minning ] : Upgrade {upgrade_name} berhasil dibeli.", flush=True)
     else:
-        print(Fore.RED + Style.BRIGHT + f"\r[ Upgrade Minning ] : Failed upgrade {upgrade_name}: {response.json()}", flush=True)
+        error_response = response.json()
+        if error_response.get('error_code') == 'INSUFFICIENT_FUNDS':
+            print(Fore.RED + Style.BRIGHT + f"\r[ Upgrade Minning ] : Coin tidak cukup wkwkw :V", flush=True)
+            return 'insufficient_funds'
+        else:
+            print(Fore.RED + Style.BRIGHT + f"\r[ Upgrade Minning ] : Failed upgrade {upgrade_name}: {response.json()}", flush=True)
 
 
 
@@ -159,8 +164,13 @@ def auto_upgrade_passive_earn(token):
         if upgrade['isAvailable'] and not upgrade['isExpired']:
             print(Fore.YELLOW + Style.BRIGHT + f"[ Upgrade Minning ] : {upgrade['name']} | Harga: {upgrade['price']} | Profit: {upgrade['profitPerHour']} / Jam ")
             print(Fore.CYAN + Style.BRIGHT + f"\r[ Upgrade Minning ] : Upgrading {upgrade['name']}", end="", flush=True)
-            buy_upgrade(token, upgrade['id'], upgrade['name'])
+            result = buy_upgrade(token, upgrade['id'], upgrade['name'])
+            if result == 'insufficient_funds':
+                print(Fore.RED + Style.BRIGHT + f"\rBeralih ke akun selanjutnya\n\n", flush=True)
+                return 
 
+
+ 
 
 
 
