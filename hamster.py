@@ -42,7 +42,7 @@ def sync_clicker(token):
     response = requests.post(url, headers=headers)
     return response
 
-def check_task(token):
+def claim_daily(token):
     url = 'https://api.hamsterkombat.io/clicker/check-task'
     headers = get_headers(token)
     headers['accept'] = 'application/json'
@@ -66,55 +66,59 @@ def main():
     
     while True:
         token = next(token_cycle)
-        
         # Authenticate
         response = authenticate(token)
         if response.status_code == 200:
             user_data = response.json()
             username = user_data['telegramUser']['username']
-            print(Fore.GREEN + f"======[ Username ] =====")
-            print(Fore.WHITE + Style.BRIGHT + username)
-
+            print(Fore.GREEN + Style.BRIGHT + f"\n======[{Fore.WHITE + Style.BRIGHT} {username} {Fore.GREEN + Style.BRIGHT}]======")
             # Sync Clicker
             response = sync_clicker(token)
             if response.status_code == 200:
                 clicker_data = response.json()['clickerUser']
                 print(Fore.YELLOW + Style.BRIGHT + f"[ Level ] : {clicker_data['level']}")
-                print(Fore.YELLOW + Style.BRIGHT + f"[ Total Earned ] : {clicker_data['totalCoins']}")
-                print(Fore.YELLOW + Style.BRIGHT + f"[ Coin ] : {clicker_data['balanceCoins']}")
+                print(Fore.YELLOW + Style.BRIGHT + f"[ Total Earned ] : {int(clicker_data['totalCoins'])}")
+                print(Fore.YELLOW + Style.BRIGHT + f"[ Coin ] : {int(clicker_data['balanceCoins'])}")
                 print(Fore.YELLOW + Style.BRIGHT + f"[ Energy ] : {clicker_data['availableTaps']}")
 
                 boosts = clicker_data['boosts']
                 boost_max_taps_level = boosts.get('BoostMaxTaps', {}).get('level', 0)
                 boost_earn_per_tap_level = boosts.get('BoostEarnPerTap', {}).get('level', 0)
                 
-                print(Fore.GREEN + f"[ Max Energy ] : {boost_max_taps_level}")
-                print(Fore.GREEN + f"[ Level Tap ] : {boost_earn_per_tap_level}")
-                
+                print(Fore.GREEN + Style.BRIGHT + f"[ Max Energy ] : {boost_max_taps_level}")
+                print(Fore.GREEN + Style.BRIGHT + f"[ Level Tap ] : {boost_earn_per_tap_level}")
+                print(Fore.GREEN + f"\r[ Checkin Daily ] : Checking...", end="", flush=True)
+
+                time.sleep(1)
                 # Check Task
-                response = check_task(token)
-                task_data = response.json()['task']
-                if task_data['isCompleted']:
-                    print(Fore.GREEN + f"[ Checkin Daily ] Days {task_data['days']} | Completed")
+                response = claim_daily(token)
+                if response.status_code == 200:
+                    daily_response = response.json()['task']
+                    if daily_response['isCompleted']:
+                        print(Fore.GREEN + Style.BRIGHT + f"\r[ Checkin Daily ] Days {daily_response['days']} | Completed", flush=True)
+                    else:
+                        print(Fore.RED + Style.BRIGHT + f"\r[ Checkin Daily ] Days {daily_response['days']} | Belum saat nya claim daily", flush=True)
+
                 else:
-                    print(Fore.RED + f"[ Checkin Daily ] Days {task_data['days']} | Belum saat nya claim daily")
-                    for _ in range(100):
-                        print(Fore.GREEN + "Tapping ...........")
-                        response = tap(token, clicker_data['maxTaps'], clicker_data['availableTaps'])
-                        if response.status_code == 200:
-                            print(Fore.GREEN + "Tapped")
-                        else:
-                            print(Fore.RED + "Gagal Tap")
-                            break
-                        time.sleep(1)  # Add delay to prevent spamming the server
+                    print(Fore.RED + Style.BRIGHT + f"\r[ Checkin Daily ] Gagal cek daily {response.status_code}", flush=True)
+                print(Fore.GREEN + f"\r[ Tap Status ] : Tapping ...", end="", flush=True)
+                response = tap(token, clicker_data['maxTaps'], clicker_data['availableTaps'])
+                if response.status_code == 200:
+                    print(Fore.GREEN + Style.BRIGHT + "\r[ Tap Status ] : Tapped            ", flush=True)
+                else:
+                    print(Fore.RED + Style.BRIGHT + "\r[ Tap Status ] : Gagal Tap           ", flush=True)
+
+                    break
+                time.sleep(1) 
             else:
-                print(Fore.RED + "Failed to sync clicker data")
+                print(Fore.RED + Style.BRIGHT + f"Gagal mendapatkan info user {response.status_code}")
         elif response.status_code == 401:
             error_data = response.json()
             if error_data.get("error_code") == "NotFound_Session":
-                print(Fore.RED + f"=== [ Token Invalid {token} ] ===")
+                print(Fore.RED + Style.BRIGHT + f"=== [ Token Invalid {token} ] ===")
             else:
-                print(Fore.RED + "Authentication failed with unknown error")
+                print(Fore.RED + Style.BRIGHT + "Authentication failed with unknown error")
+
         time.sleep(1)  # Add delay to prevent spamming the server
 
 if __name__ == "__main__":
