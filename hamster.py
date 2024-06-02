@@ -209,8 +209,10 @@ def main():
         if response.status_code == 200:
 
             user_data = response.json()
-            username = user_data['telegramUser']['username']
+            username = user_data.get('telegramUser', {}).get('username', 'KONTOL USERNAME AJA GA DISET')
+            
             print(Fore.GREEN + Style.BRIGHT + f"\r\n======[{Fore.WHITE + Style.BRIGHT} {username} {Fore.GREEN + Style.BRIGHT}]======")
+
             # Sync Clicker
             print(Fore.GREEN + f"\rGetting info user...", end="", flush=True)
             response = sync_clicker(token)
@@ -346,7 +348,7 @@ while True:
     else:
         print("Masukkan 'y' atau 'n'.")
 while True:
-    auto_upgrade_passive = input("Auto Upgrade Mining (Passive Earn)? (y/n): ").strip().lower()
+    auto_upgrade_passive = input("Auto Upgrade Mining (Passive Earn)? (default n) (y/n): ").strip().lower()
     if auto_upgrade_passive in ['y', 'n', '']:
         auto_upgrade_passive = auto_upgrade_passive or 'n'
         break
