@@ -141,7 +141,7 @@ def get_available_upgrades(token):
         return response.json()['upgradesForBuy']
     else:
 
-        print(Fore.RED + Style.BRIGHT + f"\r[ Upgrade Minning ] : Gagal mendapatkan daftar upgrade: {response.status_code}", flush=True)
+        print(Fore.RED + Style.BRIGHT + f"\r[ Upgrade Minning ] : Gagal mendapatkan daftar upgrade: {response.json()}", flush=True)
         return []
 
 
