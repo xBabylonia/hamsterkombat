@@ -293,7 +293,9 @@ def main():
             
                 # List Tasks
                 print(Fore.GREEN + f"\r[ List Task ] : Checking...", end="", flush=True)
-                if not cek_task_dict[token]:
+                if token not in cek_task_dict:  # Pastikan token ada dalam dictionary
+                    cek_task_dict[token] = False  # Inisialisasi jika belum ada
+                if not cek_task_dict[token]:  # Cek status cek_task untuk token ini
                     response = list_tasks(token)
                     cek_task_dict[token] = True  # Set status cek_task menjadi True setelah dicek
                     if response.status_code == 200:
