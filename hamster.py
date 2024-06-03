@@ -121,6 +121,15 @@ def check_task(token, task_id):
     response = requests.post(url, headers=headers, data=data)
     return response
 
+def use_booster(token):
+    url = 'https://api.hamsterkombat.io/clicker/check-task'
+    headers = get_headers(token)
+    headers['accept'] = 'application/json'
+    headers['content-type'] = 'application/json'
+    data = json.dumps({"boostId": "BoostFullAvailableTaps", "timestamp": int(time.time())})
+    response = requests.post(url, headers=headers, data=data)
+    return response
+
 
 
 def get_available_upgrades(token):
@@ -178,9 +187,9 @@ def auto_upgrade_passive_earn(token):
 
 
 # MAIN CODE
-cek_task = False
+cek_task_dict = {}
 def main():
-    global cek_task
+    global cek_task_dict
     print(Fore.GREEN + Style.BRIGHT + "Starting Hamster Kombat....\n\n")
     init_data = load_tokens('initdata.txt')
     token_cycle = cycle(init_data)
@@ -189,6 +198,7 @@ def main():
     while True:
         init_data_raw = next(token_cycle)
         token = token_dict.get(init_data_raw)
+        
         if token:
             print(Fore.GREEN + Style.BRIGHT + f"\rMenggunakan token yang sudah ada...", end="", flush=True)
         else:
@@ -283,9 +293,9 @@ def main():
             
                 # List Tasks
                 print(Fore.GREEN + f"\r[ List Task ] : Checking...", end="", flush=True)
-                if cek_task == False:
+                if not cek_task_dict[token]:
                     response = list_tasks(token)
-                    cek_task = True
+                    cek_task_dict[token] = True  # Set status cek_task menjadi True setelah dicek
                     if response.status_code == 200:
                         tasks = response.json()['tasks']
                         all_completed = all(task['isCompleted'] or task['id'] == 'invite_friends' for task in tasks)
