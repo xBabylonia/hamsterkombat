@@ -219,7 +219,7 @@ def main():
         if response.status_code == 200:
 
             user_data = response.json()
-            username = user_data.get('telegramUser', {}).get('username', 'KONTOL USERNAME AJA GA DISET')
+            username = user_data.get('telegramUser', {}).get('username', 't.me/ghalibie')
             
             print(Fore.GREEN + Style.BRIGHT + f"\r\n======[{Fore.WHITE + Style.BRIGHT} {username} {Fore.GREEN + Style.BRIGHT}]======")
 
@@ -293,27 +293,30 @@ def main():
             
                 # List Tasks
                 print(Fore.GREEN + f"\r[ List Task ] : Checking...", end="", flush=True)
-                if token not in cek_task_dict:  # Pastikan token ada dalam dictionary
-                    cek_task_dict[token] = False  # Inisialisasi jika belum ada
-                if not cek_task_dict[token]:  # Cek status cek_task untuk token ini
-                    response = list_tasks(token)
-                    cek_task_dict[token] = True  # Set status cek_task menjadi True setelah dicek
-                    if response.status_code == 200:
-                        tasks = response.json()['tasks']
-                        all_completed = all(task['isCompleted'] or task['id'] == 'invite_friends' for task in tasks)
-                        if all_completed:
-                            print(Fore.GREEN + Style.BRIGHT + "\r[ List Task ] : Semua task sudah diclaim\n", flush=True)
+                if cek_task_list == 'y':
+                    if token not in cek_task_dict:  # Pastikan token ada dalam dictionary
+                        cek_task_dict[token] = False  # Inisialisasi jika belum ada
+                    if not cek_task_dict[token]:  # Cek status cek_task untuk token ini
+                        response = list_tasks(token)
+                        cek_task_dict[token] = True  # Set status cek_task menjadi True setelah dicek
+                        if response.status_code == 200:
+                            tasks = response.json()['tasks']
+                            all_completed = all(task['isCompleted'] or task['id'] == 'invite_friends' for task in tasks)
+                            if all_completed:
+                                print(Fore.GREEN + Style.BRIGHT + "\r[ List Task ] : Semua task sudah diclaim\n", flush=True)
+                            else:
+                                for task in tasks:
+                                    if not task['isCompleted']:
+                                        print(Fore.YELLOW + Style.BRIGHT + f"\r[ List Task ] : Claiming {task['id']}...", end="", flush=True)
+                                        response = check_task(token, task['id'])
+                                        if response.status_code == 200 and response.json()['task']['isCompleted']:
+                                            print(Fore.GREEN + Style.BRIGHT + f"\r[ List Task ] : Claimed {task['id']}\n", flush=True)
+                                        else:
+                                            print(Fore.RED + Style.BRIGHT + f"\r[ List Task ] : Gagal Claim {task['id']}\n", flush=True)
                         else:
-                            for task in tasks:
-                                if not task['isCompleted']:
-                                    print(Fore.YELLOW + Style.BRIGHT + f"\r[ List Task ] : Claiming {task['id']}...", end="", flush=True)
-                                    response = check_task(token, task['id'])
-                                    if response.status_code == 200 and response.json()['task']['isCompleted']:
-                                        print(Fore.GREEN + Style.BRIGHT + f"\r[ List Task ] : Claimed {task['id']}\n", flush=True)
-                                    else:
-                                        print(Fore.RED + Style.BRIGHT + f"\r[ List Task ] : Gagal Claim {task['id']}\n", flush=True)
-                    else:
-                        print(Fore.RED + Style.BRIGHT + f"\r[ List Task ] : Gagal mendapatkan list task {response.status_code}\n", flush=True)
+                            print(Fore.RED + Style.BRIGHT + f"\r[ List Task ] : Gagal mendapatkan list task {response.status_code}\n", flush=True)
+                else:
+                    print(Fore.GREEN + f"\[ List Task ] : Skipped...", end="", flush=True)   
                 # else:
                     # print(Fore.GREEN + Style.BRIGHT + "\r[ List Task ] : Sudah di cek dan claimed", flush=True)
                     
@@ -363,6 +366,14 @@ while True:
     auto_upgrade_passive = input("Auto Upgrade Mining (Passive Earn)? (default n) (y/n): ").strip().lower()
     if auto_upgrade_passive in ['y', 'n', '']:
         auto_upgrade_passive = auto_upgrade_passive or 'n'
+        break
+    else:
+        print("Masukkan 'y' atau 'n'.")
+
+while True:
+    cek_task_list = input("Enable Cek Task? (default n) (y/n): ").strip().lower()
+    if cek_task_list in ['y', 'n', '']:
+        cek_task_list = cek_task_list or 'n'
         break
     else:
         print("Masukkan 'y' atau 'n'.")
